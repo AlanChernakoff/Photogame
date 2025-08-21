@@ -5,17 +5,15 @@
       "name": "admin",
       "role": "admin",
       "createdAt": "2025-08-21T16:30:02.339Z"
+    },
+    {
+      "id": 2,
+      "name": "lean",
+      "role": "host"
     }
   ],
   "photos": [
-    {
-      "id": 1,
-      "ownerId": 2,
-      "filename": "photo_4mditl7oqbu4losh.png",
-      "mime": "image/png",
-      "size": 124914,
-      "createdAt": "2025-08-21T19:03:41.811Z"
-    }
+    
   ],
   "game": {
     "status": "finished",
