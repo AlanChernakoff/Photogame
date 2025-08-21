@@ -67,7 +67,7 @@ app.get('/health', (_req, res) => res.json({ ok: true }))
 
 // ---------- USERS ----------
 
-// Register (el primero es admin, resto host)
+// Register
 app.post('/api/users/register', (req, res) => {
   const { name } = req.body || {}
   if (!name || typeof name !== 'string') return res.status(400).json({ error: 'name required' })
@@ -85,7 +85,7 @@ app.post('/api/users/register', (req, res) => {
   res.json(user)
 })
 
-// Login (busca usuario existente)
+// Login
 app.post('/api/users/login', (req, res) => {
   const { name } = req.body || {}
   if (!name || typeof name !== 'string') return res.status(400).json({ error: 'name required' })
@@ -108,7 +108,6 @@ app.get('/api/users/:id', (req, res) => {
 
 // ---------- UPLOAD ----------
 
-// upload photos (máx 2 por user, host o admin)
 app.post('/api/upload', upload.array('files', 2), (req, res) => {
   const userId = parseInt(req.query.userId, 10)
   if (!userId) return res.status(400).json({ error: 'userId query required' })
@@ -117,7 +116,6 @@ app.post('/api/upload', upload.array('files', 2), (req, res) => {
   const user = data.users.find(u => u.id === userId)
   if (!user) return res.status(404).json({ error: 'user not found' })
 
-  // 👉 Permitimos host y admin
   if (user.role !== 'host' && user.role !== 'admin') {
     return res.status(403).json({ error: 'only hosts or admins can upload' })
   }
@@ -131,7 +129,6 @@ app.post('/api/upload', upload.array('files', 2), (req, res) => {
     return res.status(400).json({ error: 'max 2 photos per user' })
   }
 
-  const addedMessages = []
   for (const f of files) {
     markHiddenWin(f.path)
     data.photos.push({
@@ -142,17 +139,10 @@ app.post('/api/upload', upload.array('files', 2), (req, res) => {
       size: f.size,
       createdAt: new Date().toISOString()
     })
-
-    const countNow = existing + addedMessages.length + 1
-    if (countNow === 1) {
-      addedMessages.push('una foto cargada')
-    } else if (countNow === 2) {
-      addedMessages.push('segunda foto cargada')
-    }
   }
 
   saveData(data)
-  res.json({ ok: true, added: files.length, messages: addedMessages })
+  res.json({ ok: true, added: files.length })
 })
 
 // ---------- GAME ----------
@@ -167,12 +157,11 @@ function requireAdmin(req, res) {
   return { data, admin: u }
 }
 
-// Start game (admin only)
+// Start game
 app.post('/api/game/start', (req, res) => {
   const ctx = requireAdmin(req, res); if (!ctx) return
   const { data } = ctx
   const ids = data.photos.map(p => p.id)
-  // shuffle
   for (let i = ids.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[ids[i], ids[j]] = [ids[j], ids[i]]
@@ -182,7 +171,7 @@ app.post('/api/game/start', (req, res) => {
   res.json({ ok: true, total: ids.length })
 })
 
-// Next photo (admin only)
+// Next photo
 app.get('/api/game/next', (req, res) => {
   const ctx = requireAdmin(req, res); if (!ctx) return
   const { data } = ctx
@@ -201,7 +190,7 @@ app.get('/api/game/next', (req, res) => {
   res.json({ done: false, photoId, remaining: order.length - (idx + 1) })
 })
 
-// Status (admin only)
+// Status
 app.get('/api/game/status', (req, res) => {
   const ctx = requireAdmin(req, res); if (!ctx) return
   const { data } = ctx
@@ -220,7 +209,7 @@ app.get('/api/users/by-name', (req, res) => {
   res.json(u)
 })
 
-// Serve image (admin only + only when running)
+// ---------- IMAGES ----------
 app.get('/api/image/:photoId', (req, res) => {
   const ctx = requireAdmin(req, res); if (!ctx) return
   const { data } = ctx
@@ -234,6 +223,46 @@ app.get('/api/image/:photoId', (req, res) => {
   res.setHeader('Content-Type', photo.mime)
   fs.createReadStream(filePath).pipe(res)
 })
+
+// Delete ONE photo
+app.delete('/api/photos/:photoId', (req, res) => {
+  const ctx = requireAdmin(req, res); if (!ctx) return;
+  const { data } = ctx;
+
+  const id = parseInt(req.params.photoId, 10);
+  const photoIndex = data.photos.findIndex(p => p.id === id);
+  if (photoIndex === -1) return res.status(404).json({ error: 'not found' });
+
+  const photo = data.photos[photoIndex];
+  const filePath = path.join(UPLOAD_DIR, photo.filename);
+
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+  data.photos.splice(photoIndex, 1);
+  saveData(data);
+
+  res.json({ ok: true, deletedId: id });
+});
+
+// Delete ALL photos
+app.delete('/api/photos', (req, res) => {
+  const ctx = requireAdmin(req, res); if (!ctx) return;
+  const { data } = ctx;
+
+  // borrar todos los archivos
+  for (const p of data.photos) {
+    const filePath = path.join(UPLOAD_DIR, p.filename);
+    if (fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (e) { console.error("Error borrando", filePath, e); }
+    }
+  }
+
+  // vaciar el array
+  data.photos = [];
+  saveData(data);
+
+  res.json({ ok: true, message: "Todas las fotos eliminadas" });
+});
 
 // ---------- Fallback ----------
 app.get('*', (_req, res) => {

@@ -36,6 +36,8 @@
       window.location.href = 'login.html';
     }
 
+    let currentPhotoId = null;
+
     document.getElementById('startBtn').addEventListener('click', async () => {
       const res = await fetch(`/api/game/start?userId=${user.id}`, { method: 'POST' });
       const data = await res.json();
@@ -52,16 +54,34 @@
         document.getElementById('photo').innerHTML = '';
         return;
       }
+
+      currentPhotoId = data.photoId;
       document.getElementById('status').innerText = `Quedan ${data.remaining}`;
-      document.getElementById('photo').innerHTML =
-        `<img id="gamePhoto" src="/api/image/${data.photoId}?userId=${user.id}" 
-              class="img-fluid rounded shadow" style="max-width:300px; cursor:pointer">`;
+      document.getElementById('photo').innerHTML = `
+        <div class="d-flex flex-column align-items-center gap-2">
+          <img id="gamePhoto" src="/api/image/${data.photoId}?userId=${user.id}" 
+              class="img-fluid rounded shadow" style="max-width:300px; cursor:pointer">
+          <button id="deleteBtn" class="btn btn-danger btn-sm">Borrar Foto</button>
+        </div>
+      `;
 
       // Click para abrir modal
       document.getElementById('gamePhoto').addEventListener('click', () => {
         document.getElementById('modalImg').src = `/api/image/${data.photoId}?userId=${user.id}`;
         const modal = new bootstrap.Modal(document.getElementById('imgModal'));
         modal.show();
+      });
+
+      // Botón borrar
+      document.getElementById('deleteBtn').addEventListener('click', async () => {
+        if (!confirm("¿Seguro que quieres borrar esta foto?")) return;
+        const resDel = await fetch(`/api/photos/${currentPhotoId}?userId=${user.id}`, { method: 'DELETE' });
+
+        const result = await resDel.json();
+        if (!resDel.ok) { alert(result.error); return; }
+        alert("Foto eliminada con éxito");
+        document.getElementById('photo').innerHTML = '';
+        document.getElementById('status').innerText = "Foto eliminada";
       });
     });
   </script>
