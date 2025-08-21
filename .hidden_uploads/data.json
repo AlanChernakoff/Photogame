@@ -2,23 +2,29 @@
   "users": [
     {
       "id": 1,
-      "name": "Alan",
+      "name": "admin",
       "role": "admin",
       "createdAt": "2025-08-21T16:30:02.339Z"
-    },
-    {
-      "id": 2,
-      "name": "Alan2",
-      "role": "host",
-      "createdAt": "2025-08-21T16:30:33.942Z"
     }
   ],
-  "photos": [],
+  "photos": [
+    {
+      "id": 1,
+      "ownerId": 2,
+      "filename": "photo_4mditl7oqbu4losh.png",
+      "mime": "image/png",
+      "size": 124914,
+      "createdAt": "2025-08-21T19:03:41.811Z"
+    }
+  ],
   "game": {
-    "status": "running",
-    "order": [],
-    "index": 0,
-    "startedAt": "2025-08-21T16:40:08.863Z",
-    "finishedAt": null
+    "status": "finished",
+    "order": [
+      1,
+      2
+    ],
+    "index": 2,
+    "startedAt": "2025-08-21T19:18:53.762Z",
+    "finishedAt": "2025-08-21T19:18:56.472Z"
   }
 }

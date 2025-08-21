@@ -13,9 +13,11 @@
       <button type="submit" class="btn btn-primary">Subir</button>
     </form>
     <div id="messages" class="mt-3"></div>
+
+    <h2 class="h5 mt-4">Mis fotos</h2>
+    <div id="myPhotos" class="row g-3"></div>
   </div>
 
-  <script src="js/app.js"></script>
   <script>
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     if (!user) {
@@ -23,6 +25,53 @@
       window.location.href = 'login.html';
     }
 
+    // Cargar fotos del usuario
+    async function loadMyPhotos() {
+      try {
+        const res = await fetch(`/api/my-photos?userId=${user.id}`);
+        const fotos = await res.json();
+        const cont = document.getElementById('myPhotos');
+
+        if (!res.ok) {
+          cont.innerHTML = `<p class="text-danger">${fotos.error || 'Error al cargar fotos'}</p>`;
+          return;
+        }
+
+        if (fotos.length === 0) {
+          cont.innerHTML = '<p class="text-muted">No tienes fotos todavía</p>';
+          return;
+        }
+
+        cont.innerHTML = fotos.map(f => `
+          <div class="col-6 col-md-4 text-center">
+            <img src="/uploads/${encodeURIComponent(f.filename)}" 
+                 class="img-fluid rounded mb-2" alt="foto">
+            <button class="btn btn-sm btn-danger" onclick="deletePhoto(${f.id})">Borrar</button>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Eliminar una foto
+    async function deletePhoto(id) {
+      if (!confirm('¿Seguro que quieres borrar esta foto?')) return;
+      try {
+        const res = await fetch(`/api/photos/${id}?userId=${user.id}`, { method: 'DELETE' }); // 🔥 corregido
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Error al borrar');
+          return;
+        }
+        loadMyPhotos();
+      } catch (err) {
+        alert('Error de red');
+      }
+    }
+    window.deletePhoto = deletePhoto; // para que lo vea el HTML
+
+    // Subir fotos
     document.getElementById('uploadForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData();
@@ -43,11 +92,16 @@
         }
 
         document.getElementById('messages').innerHTML =
-          data.messages.map(m => `<p class="text-success">${m}</p>`).join('');
+          `<p class="text-success">Se subieron ${data.added} fotos correctamente</p>`;
+        
+        loadMyPhotos();
       } catch (err) {
         alert('Error de red');
       }
     });
+
+    // Inicial
+    document.addEventListener('DOMContentLoaded', loadMyPhotos);
   </script>
 </body>
 </html>

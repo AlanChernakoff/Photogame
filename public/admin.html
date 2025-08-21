@@ -2,88 +2,130 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Panel Admin</title>
+  <title>Admin Panel</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    /* 🔵 Blur aplicado solo a la galería */
+    #gallery {
+      filter: blur(6px);
+      pointer-events: none; /* que no se puedan clickear */
+      user-select: none;    /* que no se puedan seleccionar */
+    }
+  </style>
 </head>
-<body class="container py-5">
-  <div class="card shadow p-4 mx-auto" style="max-width:600px;">
-    <h1 class="h4 mb-4 text-center">Panel Admin</h1>
-    <div class="d-flex gap-2 mb-3 justify-content-center">
-      <button id="startBtn" class="btn btn-success">Iniciar Juego</button>
-      <button id="nextBtn" class="btn btn-primary">Siguiente Foto</button>
+<body class="bg-light">
+
+  <div class="container py-5">
+    <div class="card shadow-lg p-4 mb-4">
+      <h1 class="h3 text-center mb-4 text-primary">Panel de Administración</h1>
+
+      <div class="d-flex justify-content-center gap-3 mb-4">
+        <button id="startGame" class="btn btn-success">
+          <i class="bi bi-play-circle"></i> Iniciar Juego
+        </button>
+        <button id="nextPhoto" class="btn btn-warning" disabled>
+          <i class="bi bi-skip-forward-circle"></i> Siguiente Foto
+        </button>
+      </div>
+
+      <div id="game" class="text-center p-3 bg-white rounded shadow-sm"></div>
     </div>
-    <div id="status" class="mb-3 text-center"></div>
-    <div id="photo" class="text-center"></div>
+
+    <div class="card shadow-lg p-4">
+      <h2 class="h4 mb-4 text-secondary">📸 Galería de Fotos</h2>
+      <div id="gallery" class="row g-4"></div>
+    </div>
   </div>
 
-  <!-- Modal para pantalla completa -->
-  <div class="modal fade" id="imgModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
-      <div class="modal-content bg-dark">
-        <div class="modal-body d-flex justify-content-center align-items-center p-0">
-          <img id="modalImg" class="img-fluid" alt="foto" style="max-height: 100vh;">
+  <!-- Bootstrap JS + Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<script>
+const user = JSON.parse(localStorage.getItem('user'))
+if (!user) location.href = '/'
+
+const BASE_URL = window.location.origin
+
+let fotos = []
+let currentIndex = 0
+
+// Iniciar juego
+document.getElementById('startGame').onclick = async () => {
+  const res = await fetch(`${BASE_URL}/api/photos`)
+  fotos = await res.json()
+  currentIndex = 0
+
+  if (fotos.length > 0) {
+    mostrarFoto(fotos[currentIndex])
+    document.getElementById('nextPhoto').disabled = false
+  } else {
+    document.getElementById('game').innerHTML = 
+      '<p class="text-danger">No hay fotos disponibles.</p>'
+    document.getElementById('nextPhoto').disabled = true
+  }
+}
+
+// Siguiente foto
+document.getElementById('nextPhoto').onclick = () => {
+  currentIndex++
+  if (currentIndex < fotos.length) {
+    mostrarFoto(fotos[currentIndex])
+  } else {
+    document.getElementById('game').innerHTML = 
+      '<p class="fw-bold text-danger">No hay más fotos.</p>'
+    document.getElementById('nextPhoto').disabled = true
+  }
+}
+
+// Mostrar foto centrada
+function mostrarFoto(foto) {
+  const div = document.getElementById('game')
+  div.innerHTML = `
+    <img src="${BASE_URL}/uploads/${foto.filename}" 
+         class="img-fluid rounded shadow-sm d-block mx-auto" 
+         style="max-height:400px">
+    <p class="mt-2 text-muted">Foto #${foto.id}</p>
+  `
+}
+
+// Cargar galería (todas abajo)
+async function loadGallery() {
+  const res = await fetch(`${BASE_URL}/api/photos`)
+  const fotos = await res.json()
+  const div = document.getElementById('gallery')
+  div.innerHTML = ''
+
+  if (!Array.isArray(fotos) || fotos.length === 0) {
+    div.innerHTML = '<p class="text-muted text-center">No hay fotos subidas.</p>'
+    return
+  }
+
+  fotos.forEach(f => {
+    const col = document.createElement('div')
+    col.className = 'col-6 col-md-4 col-lg-3'
+    col.innerHTML = `
+      <div class="card shadow-sm h-100">
+        <img src="${BASE_URL}/uploads/${f.filename}" class="card-img-top" style="object-fit:cover; height:180px">
+        <div class="card-body text-center">
+          <button class="btn btn-danger btn-sm" onclick="deletePhoto(${f.id})">
+            <i class="bi bi-trash"></i> Borrar
+          </button>
         </div>
       </div>
-    </div>
-  </div>
+    `
+    div.appendChild(col)
+  })
+}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="js/app.js"></script>
-  <script>
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    if (!user || user.role !== 'admin') {
-      alert('Acceso solo para admin');
-      window.location.href = 'login.html';
-    }
+async function deletePhoto(id) {
+  if (!confirm('¿Seguro que quieres borrar esta foto?')) return
+  await fetch(`${BASE_URL}/api/photos/${id}`, { method: 'DELETE' })
+  loadGallery()
+}
 
-    let currentPhotoId = null;
-
-    document.getElementById('startBtn').addEventListener('click', async () => {
-      const res = await fetch(`/api/game/start?userId=${user.id}`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error); return; }
-      alert(`Juego iniciado con ${data.total} fotos`);
-    });
-
-    document.getElementById('nextBtn').addEventListener('click', async () => {
-      const res = await fetch(`/api/game/next?userId=${user.id}`);
-      const data = await res.json();
-      if (!res.ok) { alert(data.error); return; }
-      if (data.done) {
-        document.getElementById('status').innerText = data.message;
-        document.getElementById('photo').innerHTML = '';
-        return;
-      }
-
-      currentPhotoId = data.photoId;
-      document.getElementById('status').innerText = `Quedan ${data.remaining}`;
-      document.getElementById('photo').innerHTML = `
-        <div class="d-flex flex-column align-items-center gap-2">
-          <img id="gamePhoto" src="/api/image/${data.photoId}?userId=${user.id}" 
-              class="img-fluid rounded shadow" style="max-width:300px; cursor:pointer">
-          <button id="deleteBtn" class="btn btn-danger btn-sm">Borrar Foto</button>
-        </div>
-      `;
-
-      // Click para abrir modal
-      document.getElementById('gamePhoto').addEventListener('click', () => {
-        document.getElementById('modalImg').src = `/api/image/${data.photoId}?userId=${user.id}`;
-        const modal = new bootstrap.Modal(document.getElementById('imgModal'));
-        modal.show();
-      });
-
-      // Botón borrar
-      document.getElementById('deleteBtn').addEventListener('click', async () => {
-        if (!confirm("¿Seguro que quieres borrar esta foto?")) return;
-        const resDel = await fetch(`/api/photos/${currentPhotoId}?userId=${user.id}`, { method: 'DELETE' });
-
-        const result = await resDel.json();
-        if (!resDel.ok) { alert(result.error); return; }
-        alert("Foto eliminada con éxito");
-        document.getElementById('photo').innerHTML = '';
-        document.getElementById('status').innerText = "Foto eliminada";
-      });
-    });
-  </script>
+loadGallery()
+</script>
 </body>
 </html>
