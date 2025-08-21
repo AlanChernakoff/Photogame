@@ -1,0 +1,44 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Alan",
+      "role": "admin",
+      "createdAt": "2025-08-21T14:34:19.908Z"
+    },
+    {
+      "id": 2,
+      "name": "Andres",
+      "role": "host",
+      "createdAt": "2025-08-21T14:34:26.864Z"
+    }
+  ],
+  "photos": [
+    {
+      "id": 1,
+      "ownerId": 2,
+      "filename": "photo_u10jvlp090hxy5zg.png",
+      "mime": "image/png",
+      "size": 124914,
+      "createdAt": "2025-08-21T15:22:02.968Z"
+    },
+    {
+      "id": 2,
+      "ownerId": 2,
+      "filename": "photo_ppxox9ygdl6adr1e.png",
+      "mime": "image/png",
+      "size": 218295,
+      "createdAt": "2025-08-21T15:22:12.403Z"
+    }
+  ],
+  "game": {
+    "status": "running",
+    "order": [
+      1,
+      2
+    ],
+    "index": 1,
+    "startedAt": "2025-08-21T15:31:04.917Z",
+    "finishedAt": null
+  }
+}
