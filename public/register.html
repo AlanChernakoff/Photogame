@@ -8,23 +8,47 @@
 <body class="container py-5">
   <div class="card shadow p-4 mx-auto" style="max-width:400px;">
     <h1 class="h4 mb-4 text-center">Registro</h1>
-    <form id="registerForm" class="d-flex gap-2">
+    <form id="registerForm" class="d-flex flex-column gap-2">
       <input type="text" id="name" class="form-control" placeholder="Tu nombre" required>
+      <select id="color" class="form-select" required>
+        <option value="">Cargando colores...</option>
+      </select>
       <button type="submit" class="btn btn-success">Registrar</button>
     </form>
+    <button onclick="window.location.href='index.html'" class="btn btn-secondary mt-3">Volver</button>
   </div>
 
-  <script src="js/app.js"></script>
   <script>
+    // Cargar colores desde /api/colors
+    async function loadColors() {
+      try {
+        const res = await fetch('/api/colors');
+        const data = await res.json();
+        const select = document.getElementById('color');
+        select.innerHTML = '<option value="">Elige un color</option>';
+        data.colors.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.value;
+          opt.textContent = c.label;
+          select.appendChild(opt);
+        });
+      } catch {
+        alert('Error al cargar colores');
+      }
+    }
+    loadColors();
+
+    // Registro con redirección según role
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('name').value.trim();
+      const color = document.getElementById('color').value;
 
       try {
         const res = await fetch('/api/users/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
+          body: JSON.stringify({ name, color })
         });
         const data = await res.json();
 
@@ -35,7 +59,12 @@
 
         localStorage.setItem('user', JSON.stringify(data));
         alert('Usuario registrado con éxito');
-        window.location.href = 'login.html';
+
+        if (data.role === 'admin') {
+          window.location.href = 'admin.html';
+        } else {
+          window.location.href = 'upload.html';
+        }
       } catch (err) {
         alert('Error de red');
       }

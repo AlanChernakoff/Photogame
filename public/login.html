@@ -8,38 +8,58 @@
 <body class="container py-5">
   <div class="card shadow p-4 mx-auto" style="max-width:400px;">
     <h1 class="h4 mb-4 text-center">Login</h1>
-    <form id="loginForm" class="d-flex gap-2">
+    <form id="loginForm" class="d-flex flex-column gap-2">
       <input type="text" id="name" class="form-control" placeholder="Tu nombre" required>
+      <select id="color" class="form-select" required>
+        <option value="">Cargando colores...</option>
+      </select>
       <button type="submit" class="btn btn-primary">Ingresar</button>
     </form>
+    <button onclick="window.location.href='index.html'" class="btn btn-secondary mt-3">Volver</button>
   </div>
 
-  <script src="js/app.js"></script>
   <script>
+    // Cargar colores desde /api/colors
+    async function loadColors() {
+      try {
+        const res = await fetch('/api/colors');
+        const data = await res.json();
+        const select = document.getElementById('color');
+        select.innerHTML = '<option value="">Elige tu color</option>';
+        data.colors.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.value;
+          opt.textContent = c.label;
+          select.appendChild(opt);
+        });
+      } catch {
+        alert('Error al cargar colores');
+      }
+    }
+    loadColors();
+
+    // Login con redirección según role
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('name').value.trim();
+      const color = document.getElementById('color').value;
 
       try {
         const res = await fetch('/api/users/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
+          body: JSON.stringify({ name, color })
         });
         const data = await res.json();
 
         if (!res.ok) {
-          if (res.status === 404) {
-            alert('Usuario no encontrado, por favor registrate primero');
-            window.location.href = 'register.html';
-          } else {
-            alert(data.error || 'Error al ingresar');
-          }
+          alert(data.error || 'Error al iniciar sesión');
           return;
         }
 
         localStorage.setItem('user', JSON.stringify(data));
-        alert(`Bienvenido ${data.name}`);
+        alert('Login exitoso');
+
         if (data.role === 'admin') {
           window.location.href = 'admin.html';
         } else {

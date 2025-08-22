@@ -1,14 +1,9 @@
 {
   "users": [
-    {
-      "id": 1,
-      "name": "admin",
-      "role": "admin",
-      "createdAt": "2025-08-21T16:30:02.339Z"
-    }
+    
   ],
   "photos": [
-    
+   
   ],
   "game": {
     "status": "finished",

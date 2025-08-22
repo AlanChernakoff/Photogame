@@ -64,8 +64,9 @@ app.get('/health', (_req, res) => res.json({ ok: true }))
 
 // ---------- USERS ----------
 app.post('/api/users/register', (req, res) => {
-  const { name } = req.body || {}
+  const { name, color } = req.body || {}
   if (!name) return res.status(400).json({ error: 'name required' })
+  if (!color) return res.status(400).json({ error: 'color required' })
 
   const data = loadData()
   if (data.users.some(u => u.name.toLowerCase() === name.toLowerCase())) {
@@ -73,18 +74,25 @@ app.post('/api/users/register', (req, res) => {
   }
   const role = data.users.length === 0 ? 'admin' : 'host'
   const id = (data.users.at(-1)?.id || 0) + 1
-  const user = { id, name, role }
+  const user = { id, name, role, color }
   data.users.push(user)
   saveData(data)
   res.json(user)
 })
 
 app.post('/api/users/login', (req, res) => {
-  const { name } = req.body || {}
+  const { name, color } = req.body || {}
   if (!name) return res.status(400).json({ error: 'name required' })
+  if (!color) return res.status(400).json({ error: 'color required' })
+
   const data = loadData()
   const u = data.users.find(x => x.name.toLowerCase() === name.toLowerCase())
   if (!u) return res.status(404).json({ error: 'not found' })
+
+  if (u.color !== color) {
+    return res.status(400).json({ error: 'invalid color' })
+  }
+
   res.json(u)
 })
 
@@ -131,6 +139,16 @@ app.get('/api/my-photos', (req, res) => {
 app.get('/api/photos', (req, res) => {
   const data = loadData()
   res.json(data.photos)
+})
+
+// ---------- COLORS ----------
+app.get('/api/colors', (_req, res) => {
+  const colorsPath = path.join(__dirname, 'data', 'colors.json')
+  if (!fs.existsSync(colorsPath)) {
+    return res.status(500).json({ error: 'colors.json not found' })
+  }
+  const json = JSON.parse(fs.readFileSync(colorsPath, 'utf8'))
+  res.json(json)
 })
 
 // borrar
