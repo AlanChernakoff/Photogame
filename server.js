@@ -103,7 +103,11 @@ app.post('/api/users/login', (req, res) => {
 })
 
 // ---------- PHOTOS ----------
-app.post('/api/upload', upload.array('files', 2), (req, res) => {
+// 🚨 Adaptado: ahora se suben `chico` y `vergonzosa` por separado
+app.post('/api/upload', upload.fields([
+  { name: 'chico', maxCount: 1 },
+  { name: 'vergonzosa', maxCount: 1 }
+]), (req, res) => {
   const userId = parseInt(req.query.userId, 10)
   if (!userId) return res.status(400).json({ error: 'userId query required' })
 
@@ -111,26 +115,48 @@ app.post('/api/upload', upload.array('files', 2), (req, res) => {
   const user = data.users.find(u => u.id === userId)
   if (!user) return res.status(404).json({ error: 'user not found' })
 
-  const files = req.files || []
-  if (files.length === 0) return res.status(400).json({ error: 'no files' })
+  const files = req.files || {}
+  if (!files['chico'] && !files['vergonzosa']) {
+    return res.status(400).json({ error: 'no files' })
+  }
 
   const existing = data.photos.filter(p => p.ownerId === userId).length
-  if (existing + files.length > 2) {
-    for (const f of files) fs.unlinkSync(f.path)
+  const newCount = (files['chico'] ? 1 : 0) + (files['vergonzosa'] ? 1 : 0)
+  if (existing + newCount > 2) {
+    for (const key of Object.keys(files)) {
+      for (const f of files[key]) fs.unlinkSync(f.path)
+    }
     return res.status(400).json({ error: 'max 2 photos per user' })
   }
 
-  for (const f of files) {
+  const added = []
+  if (files['chico']) {
+    const f = files['chico'][0]
     markHiddenWin(f.path)
     data.photos.push({
       id: (data.photos.at(-1)?.id || 0) + 1,
       ownerId: userId,
+      tipo: 'chico',
       filename: path.basename(f.path),
       createdAt: new Date().toISOString()
     })
+    added.push('chico')
   }
+  if (files['vergonzosa']) {
+    const f = files['vergonzosa'][0]
+    markHiddenWin(f.path)
+    data.photos.push({
+      id: (data.photos.at(-1)?.id || 0) + 1,
+      ownerId: userId,
+      tipo: 'vergonzosa',
+      filename: path.basename(f.path),
+      createdAt: new Date().toISOString()
+    })
+    added.push('vergonzosa')
+  }
+
   saveData(data)
-  res.json({ ok: true })
+  res.json({ ok: true, added })
 })
 
 // fotos propias

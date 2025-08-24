@@ -10,7 +10,12 @@
     <h1 class="h4 mb-4 text-center">Subir fotos</h1>
 
     <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
-      <input type="file" id="files" name="files" multiple accept="image/*" required class="form-control mb-3">
+      <label for="chico" class="form-label">Foto de Chico</label>
+      <input type="file" id="chico" name="chico" accept="image/*" required class="form-control mb-3">
+
+      <label for="vergonzosa" class="form-label">Foto Vergonzosa</label>
+      <input type="file" id="vergonzosa" name="vergonzosa" accept="image/*" required class="form-control mb-3">
+
       <button type="submit" class="btn btn-primary">Subir</button>
     </form>
     
@@ -56,6 +61,7 @@
 
         cont.innerHTML = fotos.map(f => `
           <div class="col-6 col-md-4 text-center">
+            <span class="badge bg-secondary d-block mb-1">${f.tipo}</span>
             <img src="/uploads/${encodeURIComponent(f.filename)}" 
                  class="img-fluid rounded mb-2" alt="foto">
             <button class="btn btn-sm btn-danger" onclick="deletePhoto(${f.id})">Borrar</button>
@@ -87,9 +93,12 @@
     document.getElementById('uploadForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData();
-      for (const file of document.getElementById('files').files) {
-        formData.append('files', file);
-      }
+
+      const chico = document.getElementById('chico').files[0];
+      const vergonzosa = document.getElementById('vergonzosa').files[0];
+
+      if (chico) formData.append('chico', chico);
+      if (vergonzosa) formData.append('vergonzosa', vergonzosa);
 
       try {
         const res = await fetch(`/api/upload?userId=${user.id}`, {
