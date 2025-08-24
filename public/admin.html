@@ -6,30 +6,45 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
-    /* 🔵 Blur aplicado solo a la galería */
+    body {
+      background: linear-gradient(135deg, #fdf6ec, #ffe4f0);
+    }
+    header, .card {
+      border-radius: 1rem;
+    }
     #gallery {
       filter: blur(6px);
-      pointer-events: none; /* que no se puedan clickear */
-      user-select: none;    /* que no se puedan seleccionar */
+      pointer-events: none;
+      user-select: none;
+    }
+    /* Botones de usuarios */
+    .user-btn {
+      font-weight: 900;               /* 🔹 Más grosor en el texto */
+      border-width: 4px !important;   /* 🔹 Borde más marcado */
+      transition: all 0.3s ease;
+    }
+    .user-btn:hover {
+      transform: scale(1.05);
     }
   </style>
 </head>
-<body class="bg-light">
+<body>
 
   <div class="container py-5">
     <div class="card shadow-lg p-4 mb-4">
-      <h1 class="h3 text-center mb-4 text-primary">Panel de Administración</h1>
+      <h1 class="h3 text-center mb-4 text-danger">🎉 Panel de Administración 🎉</h1>
 
       <div class="d-flex justify-content-center gap-3 mb-4">
-        <button id="startGame" class="btn btn-success">
+        <button id="startGame" class="btn btn-success btn-lg px-4">
           <i class="bi bi-play-circle"></i> Iniciar Juego
         </button>
-        <button id="nextPhoto" class="btn btn-warning" disabled>
+        <button id="nextPhoto" class="btn btn-warning btn-lg px-4" disabled>
           <i class="bi bi-skip-forward-circle"></i> Siguiente Foto
         </button>
       </div>
 
-      <div id="game" class="text-center p-3 bg-white rounded shadow-sm"></div>
+      <!-- Foto + botones -->
+      <div id="game" class="row text-center p-3 bg-white rounded shadow-sm"></div>
     </div>
 
     <div class="card shadow-lg p-4">
@@ -61,12 +76,61 @@ const BASE_URL = window.location.origin
 
 let fotos = []
 let currentIndex = 0
+let users = []
+
+let totalIntentos = 0
+let aciertos = 0
+
+// 🔹 Mapa español → inglés
+const colorMap = {
+  rojo: "red",
+  verde: "green",
+  azul: "blue",
+  amarillo: "yellow",
+  naranja: "orange",
+  violeta: "violet",
+  rosa: "pink",
+  celeste: "skyblue",
+  marron: "brown",
+  gris: "gray",
+  negro: "black",
+  blanco: "white",
+  turquesa: "turquoise",
+  magenta: "magenta",
+  beige: "beige",
+  dorado: "gold",
+  plateado: "silver",
+  lima: "lime",
+  oliva: "olive",
+  granate: "maroon",
+  fucsia: "fuchsia",
+  cian: "cyan",
+  coral: "coral",
+  menta: "mediumspringgreen",
+  lavanda: "lavender",
+  mostaza: "goldenrod",
+  chocolate: "chocolate",
+  vino: "darkred",
+  esmeralda: "seagreen",
+  púrpura: "purple"
+}
+
+// 🔹 Traer usuarios (menos Admin)
+async function loadUsers() {
+  const res = await fetch(`${BASE_URL}/api/users`)
+  const allUsers = await res.json()
+  users = allUsers.filter(u => u.name !== "Admin")
+  return allUsers
+}
 
 // Iniciar juego
 document.getElementById('startGame').onclick = async () => {
+  await loadUsers()
   const res = await fetch(`${BASE_URL}/api/photos`)
   fotos = await res.json()
   currentIndex = 0
+  totalIntentos = 0
+  aciertos = 0
 
   if (fotos.length > 0) {
     mostrarFoto(fotos[currentIndex])
@@ -84,22 +148,90 @@ document.getElementById('nextPhoto').onclick = () => {
   if (currentIndex < fotos.length) {
     mostrarFoto(fotos[currentIndex])
   } else {
-    document.getElementById('game').innerHTML = 
-      '<p class="fw-bold text-danger">No hay más fotos.</p>'
+    const porcentaje = totalIntentos > 0 ? Math.round((aciertos / totalIntentos) * 100) : 0
+    document.getElementById('game').innerHTML = `
+      <div class="col-12 text-center">
+        <h3 class="text-success fw-bold">🎊 Juego terminado 🎊</h3>
+        <p class="lead">Han logrado <span class="text-success">${aciertos}</span> aciertos de <span class="text-danger">${totalIntentos}</span> intentos.</p>
+        <h4 class="fw-bold">✨ Su porcentaje final: ${porcentaje}% ✨</h4>
+      </div>
+    `
     document.getElementById('nextPhoto').disabled = true
+
+    // 🔓 Desbloquear galería al terminar
+    const gallery = document.getElementById('gallery')
+    gallery.style.filter = "none"
+    gallery.style.pointerEvents = "auto"
+    gallery.style.userSelect = "auto"
   }
 }
 
-// Mostrar foto centrada
-function mostrarFoto(foto) {
-  const div = document.getElementById('game')
-  div.innerHTML = `
-    <img src="${BASE_URL}/uploads/${foto.filename}" 
-         class="img-fluid rounded shadow-sm d-block mx-auto" 
-         style="max-height:400px; cursor:pointer"
-         onclick="verEnGrande('${BASE_URL}/uploads/${foto.filename}')">
-    <p class="mt-2 text-muted">Foto #${foto.id}</p>
+// Mostrar estadísticas
+function actualizarStats() {
+  const stats = document.getElementById('stats')
+  if (!stats) return
+
+  const porcentaje = totalIntentos > 0 ? Math.round((aciertos / totalIntentos) * 100) : 0
+
+  stats.innerHTML = `
+    <h6 class="text-center mb-2">📊 ¡Puntaje grupal!</h6>
+    <div class="progress" style="height: 25px; border-radius: 15px; overflow:hidden;">
+      <div class="progress-bar progress-bar-striped progress-bar-animated 
+                  ${porcentaje >= 70 ? 'bg-success' : porcentaje >= 40 ? 'bg-warning' : 'bg-danger'}"
+           role="progressbar" style="width: ${porcentaje}%;">${porcentaje}%</div>
+    </div>
+    <p class="mt-2 text-center fw-bold">
+      ✅ <span class="text-success">${aciertos}</span> /
+      ❌ <span class="text-danger">${totalIntentos}</span>
+    </p>
   `
+}
+
+// Mostrar foto + lista de usuarios en columna
+function mostrarFoto(foto) {
+  const game = document.getElementById('game')
+  game.innerHTML = `
+    <div class="col-md-8 d-flex justify-content-center align-items-center mb-3 mb-md-0">
+      <img src="${BASE_URL}/uploads/${foto.filename}" 
+           class="img-fluid rounded shadow-sm" 
+           style="max-height:400px; cursor:pointer"
+           onclick="verEnGrande('${BASE_URL}/uploads/${foto.filename}')">
+    </div>
+    <div class="col-md-4 d-flex flex-column align-items-stretch gap-2" id="userButtons">
+      <h5 class="text-secondary mb-2">¿Quién subió la foto?</h5>
+      <div id="stats" class="mt-3"></div>
+    </div>
+  `
+
+  // 🔹 Crear botones de usuarios
+  const container = document.getElementById('userButtons')
+  users.forEach(u => {
+    const btn = document.createElement('button')
+    btn.className = "btn user-btn btn-light"
+
+    const userColor = colorMap[u.color?.toLowerCase()] || u.color
+    btn.style.border = `4px solid ${userColor}`   // 🔹 borde pintado
+    btn.style.backgroundColor = "white"
+    btn.style.color = userColor                   // 🔹 texto pintado
+    btn.textContent = u.name
+
+    btn.onclick = () => {
+      totalIntentos++
+      if (foto.ownerId === u.id) {
+        btn.style.backgroundColor = "green"
+        btn.style.color = "white"   // 🔹 texto pasa a blanco
+        aciertos++
+      } else {
+        btn.style.backgroundColor = "red"
+        btn.style.color = "white"   // 🔹 texto pasa a blanco
+      }
+      actualizarStats()
+    }
+
+    container.insertBefore(btn, document.getElementById('stats'))
+  })
+
+  actualizarStats()
 }
 
 // Abrir foto en modal
@@ -109,10 +241,16 @@ function verEnGrande(src) {
   modal.show()
 }
 
-// Cargar galería (todas abajo)
+// Cargar galería (ordenada por usuario con nombres y colores)
 async function loadGallery() {
-  const res = await fetch(`${BASE_URL}/api/photos`)
-  const fotos = await res.json()
+  const [resFotos, resUsers] = await Promise.all([
+    fetch(`${BASE_URL}/api/photos`),
+    fetch(`${BASE_URL}/api/users`)
+  ])
+  const fotos = await resFotos.json()
+  const allUsers = await resUsers.json()
+  const usuarios = Object.fromEntries(allUsers.map(u => [u.id, u]))
+
   const div = document.getElementById('gallery')
   div.innerHTML = ''
 
@@ -121,20 +259,41 @@ async function loadGallery() {
     return
   }
 
+  const fotosPorUsuario = {}
   fotos.forEach(f => {
-    const col = document.createElement('div')
-    col.className = 'col-6 col-md-4 col-lg-3'
-    col.innerHTML = `
-      <div class="card shadow-sm h-100">
-        <img src="${BASE_URL}/uploads/${f.filename}" class="card-img-top" style="object-fit:cover; height:180px">
-        <div class="card-body text-center">
-          <button class="btn btn-danger btn-sm" onclick="deletePhoto(${f.id})">
-            <i class="bi bi-trash"></i> Borrar
-          </button>
+    if (!fotosPorUsuario[f.ownerId]) {
+      fotosPorUsuario[f.ownerId] = []
+    }
+    fotosPorUsuario[f.ownerId].push(f)
+  })
+
+  Object.keys(fotosPorUsuario).sort().forEach(userId => {
+    const userFotos = fotosPorUsuario[userId]
+    const usuario = usuarios[userId]
+
+    const header = document.createElement('div')
+    header.className = 'col-12'
+    const userColor = colorMap[usuario.color?.toLowerCase()] || usuario.color
+    header.innerHTML = `<h5 class="mt-3 fw-bold" style="color:${userColor}">${usuario.name}</h5>`
+    div.appendChild(header)
+
+    userFotos.forEach(f => {
+      const col = document.createElement('div')
+      col.className = 'col-6 col-md-4 col-lg-3'
+      col.innerHTML = `
+        <div class="card shadow-sm h-100">
+          <img src="${BASE_URL}/uploads/${f.filename}" class="card-img-top" 
+               style="object-fit:cover; height:180px; cursor:pointer"
+               onclick="verEnGrande('${BASE_URL}/uploads/${f.filename}')">
+          <div class="card-body text-center">
+            <button class="btn btn-danger btn-sm" onclick="deletePhoto(${f.id})">
+              <i class="bi bi-trash"></i> Borrar
+            </button>
+          </div>
         </div>
-      </div>
-    `
-    div.appendChild(col)
+      `
+      div.appendChild(col)
+    })
   })
 }
 

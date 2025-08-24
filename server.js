@@ -80,6 +80,12 @@ app.post('/api/users/register', (req, res) => {
   res.json(user)
 })
 
+// listar todos los usuarios
+app.get('/api/users', (req, res) => {
+  const data = loadData()
+  res.json(data.users)
+})
+
 app.post('/api/users/login', (req, res) => {
   const { name, color } = req.body || {}
   if (!name) return res.status(400).json({ error: 'name required' })
@@ -138,7 +144,13 @@ app.get('/api/my-photos', (req, res) => {
 // todas las fotos (admin)
 app.get('/api/photos', (req, res) => {
   const data = loadData()
-  res.json(data.photos)
+  const ordenadas = data.photos.sort((a, b) => {
+    if (a.ownerId !== b.ownerId) {
+      return a.ownerId - b.ownerId   // primero por usuario
+    }
+    return a.id - b.id               // luego por id (orden de subida)
+  })
+  res.json(ordenadas)
 })
 
 // ---------- COLORS ----------
