@@ -41,10 +41,18 @@
         <button id="nextPhoto" class="btn btn-warning btn-lg px-4" disabled>
           <i class="bi bi-skip-forward-circle"></i> Siguiente Foto
         </button>
+        <!-- 🔹 Botón Usuarios solo visible para Admin -->
+        <button id="showUsers" class="btn btn-info btn-lg px-4" style="display:none;">
+          <i class="bi bi-people-fill"></i> Usuarios
+        </button>
       </div>
 
       <!-- Foto + botones -->
       <div id="game" class="row text-center p-3 bg-white rounded shadow-sm"></div>
+
+      <!-- 🔹 Contenedores para lista de usuarios y fotos -->
+      <div id="userList" class="row text-center p-3 bg-white rounded shadow-sm mt-3" style="display:none;"></div>
+      <div id="userPhotos" class="row g-4 mt-3" style="display:none;"></div>
     </div>
 
     <div class="card shadow-lg p-4">
@@ -210,20 +218,20 @@ function mostrarFoto(foto) {
     btn.className = "btn user-btn btn-light"
 
     const userColor = colorMap[u.color?.toLowerCase()] || u.color
-    btn.style.border = `4px solid ${userColor}`   // 🔹 borde pintado
+    btn.style.border = `4px solid ${userColor}`
     btn.style.backgroundColor = "white"
-    btn.style.color = userColor                   // 🔹 texto pintado
+    btn.style.color = userColor
     btn.textContent = u.name
 
     btn.onclick = () => {
       totalIntentos++
       if (foto.ownerId === u.id) {
         btn.style.backgroundColor = "green"
-        btn.style.color = "white"   // 🔹 texto pasa a blanco
+        btn.style.color = "white"
         aciertos++
       } else {
         btn.style.backgroundColor = "red"
-        btn.style.color = "white"   // 🔹 texto pasa a blanco
+        btn.style.color = "white"
       }
       actualizarStats()
     }
@@ -295,6 +303,68 @@ async function loadGallery() {
       div.appendChild(col)
     })
   })
+}
+
+// 🔹 Usuarios (solo Admin con toggle)
+if (user.role === "admin") {
+  document.getElementById("showUsers").style.display = "inline-block";
+
+  document.getElementById("showUsers").addEventListener("click", async () => {
+    const listDiv = document.getElementById("userList");
+    const photosDiv = document.getElementById("userPhotos");
+
+    // 🔹 Toggle: si ya está visible, lo ocultamos
+    if (listDiv.style.display === "flex") {
+      listDiv.style.display = "none";
+      photosDiv.style.display = "none";
+      return;
+    }
+
+    const res = await fetch(`${BASE_URL}/api/users`);
+    const allUsers = await res.json();
+    listDiv.style.display = "flex";
+    photosDiv.style.display = "none";
+    listDiv.innerHTML = "";
+
+    allUsers.filter(u => u.name !== "Admin").forEach(u => {
+      const userColor = colorMap[u.color?.toLowerCase()] || u.color;
+      const btn = document.createElement("button");
+      btn.className = "btn user-btn btn-light m-2";
+      btn.style.border = `4px solid ${userColor}`;
+      btn.style.color = userColor;
+      btn.textContent = u.name;
+      btn.onclick = async () => {
+        const resFotos = await fetch(`${BASE_URL}/api/my-photos?userId=${u.id}`);
+        const fotosUsuario = await resFotos.json();
+        photosDiv.innerHTML = "";
+        photosDiv.style.display = "flex";
+
+        if (!Array.isArray(fotosUsuario) || fotosUsuario.length === 0) {
+          photosDiv.innerHTML = '<p class="text-muted text-center">No hay fotos de este usuario.</p>';
+          return;
+        }
+
+        fotosUsuario.forEach(f => {
+          const col = document.createElement("div");
+          col.className = "col-6 col-md-4 col-lg-3";
+          col.innerHTML = `
+            <div class="card shadow-sm h-100">
+              <img src="${BASE_URL}/uploads/${f.filename}" class="card-img-top" 
+                   style="object-fit:cover; height:180px; cursor:pointer"
+                   onclick="verEnGrande('${BASE_URL}/uploads/${f.filename}')">
+              <div class="card-body text-center">
+                <button class="btn btn-danger btn-sm" onclick="deletePhoto(${f.id})">
+                  <i class="bi bi-trash"></i> Borrar
+                </button>
+              </div>
+            </div>
+          `;
+          photosDiv.appendChild(col);
+        });
+      };
+      listDiv.appendChild(btn);
+    });
+  });
 }
 
 async function deletePhoto(id) {
