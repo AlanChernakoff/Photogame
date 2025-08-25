@@ -367,9 +367,10 @@ if (user.role === "admin") {
   });
 }
 
+// 🔹 FIX: ahora siempre mandamos userId en la query
 async function deletePhoto(id) {
   if (!confirm('¿Seguro que quieres borrar esta foto?')) return
-  await fetch(`${BASE_URL}/api/photos/${id}`, { method: 'DELETE' })
+  await fetch(`${BASE_URL}/api/photos/${id}?userId=${user.id}`, { method: 'DELETE' })
   loadGallery()
 }
 
