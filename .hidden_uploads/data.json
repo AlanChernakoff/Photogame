@@ -1,10 +1,13 @@
 {
   "users": [
-    
+    {
+      "id": 1,
+      "name": "Admin",
+      "role": "admin",
+      "color": "dorado"
+    }
   ],
-  "photos": [
-   
-  ],
+  "photos": [],
   "game": {
     "status": "finished",
     "order": [
